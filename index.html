@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot de Turnos</title>
+    <style>
+        /* Estilos generales de la página */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* Contenedor principal del chat */
+        #chat-container {
+            width: 400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Encabezado morado */
+        .chat-header {
+            background-color: #a728e8; /* Color similar al de Make */
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        /* Área de los mensajes */
+        #chat-box {
+            height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: #fafafa;
+        }
+
+        /* Estilo base de las burbujas */
+        .message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        /* Burbuja del usuario (derecha) */
+        .user-message {
+            background-color: #a728e8;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* Burbuja del bot (izquierda) */
+        .bot-message {
+            background-color: #e4e6eb;
+            color: #050505;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Área inferior para escribir */
+        .input-area {
+            display: flex;
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #eee;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            outline: none;
+            font-size: 0.95rem;
+            transition: border-color 0.3s;
+        }
+
+        #user-input:focus {
+            border-color: #a728e8;
+        }
+
+        #send-button {
+            background-color: #a728e8;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            padding: 0 20px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        #send-button:hover {
+            background-color: #8c1ec4;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <div class="chat-header">📅 Asistente de Turnos</div>
+    <div id="chat-box">
+        <div class="message bot-message">¡Hola! Soy tu asistente virtual. ¿En qué te puedo ayudar hoy?</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Escribe tu mensaje aquí..." autocomplete="off">
+        <button id="send-button">Enviar</button>
+    </div>
+</div>
+
+<script>
+    // Tu Webhook de Make
+    const webhookUrl = "https://hook.us2.make.com/unm8bviipvxpf81ii44ta6kn91cijfvd";
+    
+    const chatBox = document.getElementById("chat-box");
+    const userInput = document.getElementById("user-input");
+    const sendButton = document.getElementById("send-button");
+
+    sendButton.addEventListener("click", enviarMensaje);
+    
+    userInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            enviarMensaje();
+        }
+    });
+
+    async function enviarMensaje() {
+        const mensaje = userInput.value.trim();
+        if (mensaje === "") return;
+
+        // 1. Mostrar burbuja del usuario
+        chatBox.innerHTML += `<div class="message user-message">${mensaje}</div>`;
+        userInput.value = ""; 
+        chatBox.scrollTop = chatBox.scrollHeight; 
+
+        // 2. Mostrar indicador de "Escribiendo..." del bot
+        const typingId = "typing-" + Date.now();
+        chatBox.innerHTML += `<div id="${typingId}" class="message bot-message"><em>Escribiendo...</em></div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            // 3. Enviar datos a Make
+            const respuesta = await fetch(webhookUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: mensaje })
+            });
+
+            // 4. Recibir respuesta de Make
+            const botResponseText = await respuesta.text();
+
+            // 5. Quitar "Escribiendo..." y mostrar burbuja del bot
+            document.getElementById(typingId).remove();
+            chatBox.innerHTML += `<div class="message bot-message">${botResponseText}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+        } catch (error) {
+            console.error("Error al conectar con Make:", error);
+            document.getElementById(typingId).remove();
+            chatBox.innerHTML += `<div class="message bot-message" style="background-color: #ffcccc;">Error de conexión. Intenta de nuevo.</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    }
+</script>
+</body>
+</html>
